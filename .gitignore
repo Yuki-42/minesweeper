@@ -1,5 +1,5 @@
 # Added by Yuki42_
-.env
+server/.env
 
 ### Python template
 # Byte-compiled / optimized / DLL files
@@ -124,7 +124,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
+server/.env
 .venv
 env/
 venv/
