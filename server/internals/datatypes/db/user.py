@@ -1,21 +1,17 @@
 """
-Contains the author class.
+Contains the user class.
 """
 # Standard Library Imports
-from datetime import datetime
 
 # Third Party Imports
 from passlib.hash import pbkdf2_sha512
-from psycopg2 import sql
-from psycopg2.sql import SQL
 from psycopg2.extensions import connection as Connection
-from psycopg2.extras import RealDictCursor, RealDictRow
+from psycopg2.extras import RealDictRow
 
 # Local Imports
-from ._base import DbBase
+from server.internals.datatypes.db._base import DbBase
 
 
-# New user class using the DbBase base class
 class User(DbBase):
     """
     Application user.

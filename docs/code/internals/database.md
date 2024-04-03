@@ -17,6 +17,21 @@ All tables will also have a `created_at` column that will store the date and tim
 have a default value of `CURRENT_TIMESTAMP` and will be set to the current date and time when a new row is inserted. This
 column will be the 2nd column in all tables.
 
+All data that is accessed by the API must have a `uuid` column that will store a UUID for the row. This column will have a
+default value of `uuid_generate_v4()` and will be set to a new UUID when a new row is inserted. This column will be the
+3rd column in all tables. This UUID will be used to identify the row in the API.
+
+## Many to Many Relationships
+
+Some tables will have many-to-many relationships. These relationships will be handled using a separate table that will
+store the IDs of the two tables that are related. These tables will comply with the naming convention of `table1_table2`
+where `table1` and `table2` are the names of the tables that are related. These tables will also comply with the above [rules](#tables).
+
+The foreign keys in these tables must be set to `ON DELETE CASCADE` and `ON UPDATE CASCADE` to ensure that when a row is deleted from one of the
+related tables, the row is also deleted from the relationship table.
+
+The foreign keys must also follow the naming convention of `table1_id` and `table2_id` where `table1` and `table2` are the names of the tables that are related.
+
 ### users
 
 Used to store user information.
@@ -50,20 +65,22 @@ Used to store game information.
 
 #### Columns 
 
-| Column Name | Data Type | Default           | Description                             | Extra                | Example             |
-|-------------|-----------|-------------------|-----------------------------------------|----------------------|---------------------|
-| id          | SERIAL    |                   | The unique identifier for the game.     | NOT NULL PRIMARY KEY | 1                   |
-| created_at  | TIMESTAMP | CURRENT_TIMESTAMP | The date and time the game was created. | NOT NULL             | 2020-01-01 12:00:00 |
-| key         | TEXT      |                   | The key to regenerate the game board.   | NOT NULL             | 1234567890abcdef    |
-| width       | INTEGER   |                   | The width of the game board.            | NOT NULL             | 10                  |
-| height      | INTEGER   |                   | The height of the game board.           | NOT NULL             | 10                  |
-| time        | REAL      |                   | The time it took to complete the game.  |                      | 60.0                |
+| Column Name | Data Type | Default            | Description                             | Extra                | Example                              |
+|-------------|-----------|--------------------|-----------------------------------------|----------------------|--------------------------------------|
+| id          | SERIAL    |                    | The unique identifier for the game.     | NOT NULL PRIMARY KEY | 1                                    |
+| created_at  | TIMESTAMP | CURRENT_TIMESTAMP  | The date and time the game was created. | NOT NULL             | 2020-01-01 12:00:00                  |
+| uuid        | UUID      | uuid_generate_v4() | The UUID of the game.                   | NOT NULL             | 123e4567-e89b-12d3-a456-426614174000 |
+| key         | TEXT      |                    | The key to regenerate the game board.   | NOT NULL             | 1234567890abcdef                     |
+| width       | INTEGER   |                    | The width of the game board.            | NOT NULL             | 10                                   |
+| height      | INTEGER   |                    | The height of the game board.           | NOT NULL             | 10                                   |
+| time        | REAL      |                    | The time it took to complete the game.  |                      | 60.0                                 |
 
 
 ```postgresql
 CREATE TABLE IF NOT EXISTS games (
     id SERIAL NOT NULL PRIMARY KEY,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    uuid UUID NOT NULL DEFAULT uuid_generate_v4(),
     key TEXT NOT NULL,
     width INTEGER NOT NULL,
     height INTEGER NOT NULL,
@@ -71,9 +88,9 @@ CREATE TABLE IF NOT EXISTS games (
 );
 ```
 
-### game_players
+### games_users
 
-Used to store the players in a game.
+Used to store the users in a game.
 
 | Column Name | Data Type | Default           | Description                             | Extra                | Example             |
 |-------------|-----------|-------------------|-----------------------------------------|----------------------|---------------------|
@@ -85,21 +102,23 @@ Used to store the players in a game.
 
 #### Keys
 
-All keys, be they primary or foreign are listed here.
 
 | Key Name   | Column(s) | Reference Table | Reference Column(s) |
 |------------|-----------|-----------------|---------------------|
-| game_id_fk | gameId    | games           | id                  |
-| user_id_fk | userId    | users           | id                  |
+| game_id_fk | games_id  | games           | id                  |
+| user_id_fk | users_id  | users           | id                  |
+
+#### SQL
 
 ```postgresql
-CREATE TABLE IF NOT EXISTS game_players (
+CREATE TABLE IF NOT EXISTS games_users (
     id SERIAL NOT NULL PRIMARY KEY,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    game_id INTEGER NOT NULL,
-    user_id INTEGER NOT NULL,
+    games_id INTEGER NOT NULL,
+    users_id INTEGER NOT NULL,
     winner BOOLEAN DEFAULT FALSE NOT NULL,
-    FOREIGN KEY (game_id) REFERENCES games(id),
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (games_id) REFERENCES games(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (users_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE (games_id, users_id)  /* Prevent duplicate entries */
 );
 ```

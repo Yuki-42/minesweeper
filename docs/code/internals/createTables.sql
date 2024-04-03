@@ -1,3 +1,8 @@
+/* Drop existing tables */
+DROP TABLE IF EXISTS game_players;
+DROP TABLE IF EXISTS games;
+DROP TABLE IF EXISTS users;
+
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS users (
@@ -13,18 +18,20 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS games (
     id SERIAL NOT NULL PRIMARY KEY,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    uuid UUID NOT NULL DEFAULT uuid_generate_v4(),
     key TEXT NOT NULL,
     width INTEGER NOT NULL,
     height INTEGER NOT NULL,
     time REAL
 );
 
-CREATE TABLE IF NOT EXISTS game_players (
+CREATE TABLE IF NOT EXISTS games_users (
     id SERIAL NOT NULL PRIMARY KEY,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    game_id INTEGER NOT NULL,
-    user_id INTEGER NOT NULL,
+    games_id INTEGER NOT NULL,
+    users_id INTEGER NOT NULL,
     winner BOOLEAN DEFAULT FALSE NOT NULL,
-    FOREIGN KEY (game_id) REFERENCES games(id),
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (games_id) REFERENCES games(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (users_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE (games_id, users_id)  /* Prevent duplicate entries */
 );
