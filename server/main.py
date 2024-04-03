@@ -5,9 +5,10 @@ Main file for the project
 # Standard Library Imports
 
 # Third Party Imports
-from flask import Flask, session, request, redirect, url_for as urlFor, render_template as renderTemplate
-from flask_cors import CORS
-from flask_socketio import SocketIO
+from fastapi import FastAPI
 
 # Local Imports
+from internals import Config, Database
+from internals.datatypes import User, Game, Board, Cell
 
+#
