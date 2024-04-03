@@ -1,5 +1,6 @@
 """
-datatypes module.
+Initializes the database data types module.
 """
 
-from .user import User
+from server.internals.datatypes.db.user import User
+from server.internals.datatypes.db.game import Game
