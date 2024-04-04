@@ -14,11 +14,11 @@ class Config:
     Configuration class for the server.
     """
     # Type hints
-    databaseIp: str
-    databasePort: str
-    databaseName: str
-    databaseUser: str
-    databasePassword: str
+    dbIp: str
+    dbPort: str
+    dbName: str
+    dbUser: str
+    dbPassword: str
 
     def __init__(self) -> None:
         """
@@ -31,8 +31,8 @@ class Config:
         loadDotEnv()
 
         # Set the database variables
-        self.databaseIp = environ.get("DATABASE_IP")
-        self.databasePort = environ.get("DATABASE_PORT")
-        self.databaseName = environ.get("DATABASE_NAME")
-        self.databaseUser = environ.get("DATABASE_USER")
-        self.databasePassword = environ.get("DATABASE_PASSWORD")
+        self.dbIp = environ.get("DB_IP")
+        self.dbPort = environ.get("DB_PORT")
+        self.dbName = environ.get("DB_NAME")
+        self.dbUser = environ.get("DB_USER")
+        self.dbPassword = environ.get("DB_PASS")
