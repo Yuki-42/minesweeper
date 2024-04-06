@@ -73,7 +73,7 @@ class DbBase:
     def _set(
             self,
             column: str,
-            value: None | str | int | float | bool
+            value: Any
     ) -> None:
         """
         Sets a column in the database.
