@@ -19,6 +19,9 @@ class Config:
     dbName: str
     dbUser: str
     dbPassword: str
+    secretKey: str
+    tokenExpireDays: int
+    tokenExpireMinutes: int
 
     def __init__(self) -> None:
         """
@@ -36,3 +39,6 @@ class Config:
         self.dbName = environ.get("DB_NAME")
         self.dbUser = environ.get("DB_USER")
         self.dbPassword = environ.get("DB_PASS")
+        self.secretKey = environ.get("SECRET_KEY")
+        self.tokenExpireDays = int(environ.get("TOKEN_EXPIRE_DAYS"))
+        self.tokenExpireMinutes = int(environ.get("TOKEN_EXPIRE_MINUTES"))
