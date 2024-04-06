@@ -122,3 +122,27 @@ CREATE TABLE IF NOT EXISTS games_users (
     UNIQUE (games_id, users_id)  /* Prevent duplicate entries */
 );
 ```
+
+### logs
+
+Used to store logs for the application.
+
+| Column Name | Data Type | Default           | Description                            | Extra                | Example             |
+|-------------|-----------|-------------------|----------------------------------------|----------------------|---------------------|
+| id          | SERIAL    |                   | The unique identifier for the log.     | NOT NULL PRIMARY KEY | 1                   |
+| created_at  | TIMESTAMP | CURRENT_TIMESTAMP | The date and time the log was created. | NOT NULL             | 2020-01-01 12:00:00 |
+| level       | INTEGER   |                   | The log level.                         | NOT NULL             | 0                   |
+| module      | TEXT      |                   | The module that generated the log.     | NOT NULL             | api                 |
+| message     | TEXT      |                   | The log message.                       | NOT NULL             | Log message         |
+
+#### SQL
+
+```postgresql
+CREATE TABLE IF NOT EXISTS logs (
+    id SERIAL NOT NULL PRIMARY KEY,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    level INTEGER NOT NULL,
+    module TEXT NOT NULL,
+    message TEXT NOT NULL
+);
+```
