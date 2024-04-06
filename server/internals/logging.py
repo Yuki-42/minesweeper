@@ -182,10 +182,10 @@ class DatabaseHandler(Handler):
             None
         """
         self._cursor.execute(
-            "INSERT INTO logs (time, level, message) VALUES (%s, %s, %s)",
+            "INSERT INTO logs (level, module, message) VALUES (%s, %s, %s)",
             (
-                record.created,
-                record.levelname,
+                record.levelno,
+                record.name,
                 record.msg
             )
         )
