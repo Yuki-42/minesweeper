@@ -3,3 +3,4 @@ fastapi
 passlib
 python-dotenv
 python-multipart
+python-jose
