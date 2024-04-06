@@ -14,7 +14,9 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT NOT NULL,
     password VARCHAR(130) NOT NULL,
     username TEXT NOT NULL,
-    access_level INTEGER DEFAULT 0 NOT NULL
+    access_level INTEGER DEFAULT 0 NOT NULL,
+    access_token TEXT NOT NULL,
+    oauth_scopes TEXT[]
 );
 
 CREATE TABLE IF NOT EXISTS games (

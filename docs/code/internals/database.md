@@ -36,15 +36,17 @@ The foreign keys must also follow the naming convention of `table1_id` and `tabl
 
 Used to store user information.
 
-| Column Name  | Data Type    | Default            | Description                             | Extra                | Example                              |
-|--------------|--------------|--------------------|-----------------------------------------|----------------------|--------------------------------------|
-| id           | SERIAL       |                    | The unique identifier for the user.     | NOT NULL PRIMARY KEY | 1                                    |
-| created_at   | TIMESTAMP    | CURRENT_TIMESTAMP  | The date and time the user was created. | NOT NULL             | 2020-01-01 12:00:00                  |
-| uuid         | UUID         | uuid_generate_v4() | The UUID of the user.                   | NOT NULL             | 123e4567-e89b-12d3-a456-426614174000 |
-| email        | TEXT         |                    | The email of the user.                  | NOT NULL             |                                      |
-| password     | VARCHAR(130) |                    | The hashed password of the user.        | NOT NULL             |                                      |
-| username     | TEXT         |                    | The username of the user.               | NOT NULL             | user                                 |
-| access_level | INTEGER      | 0                  | The access level of the user.           | NOT NULL             | 0                                    |
+| Column Name   | Data Type    | Default            | Description                             | Extra                | Example                              |
+|---------------|--------------|--------------------|-----------------------------------------|----------------------|--------------------------------------|
+| id            | SERIAL       |                    | The unique identifier for the user.     | NOT NULL PRIMARY KEY | 1                                    |
+| created_at    | TIMESTAMP    | CURRENT_TIMESTAMP  | The date and time the user was created. | NOT NULL             | 2020-01-01 12:00:00                  |
+| uuid          | UUID         | uuid_generate_v4() | The UUID of the user.                   | NOT NULL             | 123e4567-e89b-12d3-a456-426614174000 |
+| email         | TEXT         |                    | The email of the user.                  | NOT NULL             |                                      |
+| password      | VARCHAR(130) |                    | The hashed password of the user.        | NOT NULL             |                                      |
+| username      | TEXT         |                    | The username of the user.               | NOT NULL             | user                                 |
+| access_level  | INTEGER      | 0                  | The access level of the user.           | NOT NULL             | 0                                    |
+| access_token  | TEXT         |                    | The access token of the user.           | NOT NULL             |                                      |
+| oauth_scopes  | TEXT[]       |                    | The OAuth scopes of the user.           |                      |                                      |
 
 ```postgresql
 CREATE TABLE IF NOT EXISTS users (
@@ -54,7 +56,9 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT NOT NULL,
     password VARCHAR(130) NOT NULL,
     username TEXT NOT NULL,
-    access_level INTEGER DEFAULT 0 NOT NULL
+    access_level INTEGER DEFAULT 0 NOT NULL,
+    access_token TEXT NOT NULL,
+    oauth_scopes TEXT[]
 );
 ```
 
