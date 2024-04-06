@@ -4,12 +4,12 @@ Contains the user class.
 # Standard Library Imports
 
 # Third Party Imports
-from passlib.hash import pbkdf2_sha512
+from passlib.context import CryptContext
 from psycopg2.extensions import connection as Connection
 from psycopg2.extras import RealDictRow
 
 # Local Imports
-from server.internals.datatypes.db._base import DbBase
+from ._base import DbBase
 
 
 class User(DbBase):
@@ -22,6 +22,11 @@ class User(DbBase):
     _password: str
     _username: str
     _accessLevel: int
+    _accessToken: str
+    _oauthScopes: list[str]
+
+    # Password hashing context
+    _context: CryptContext = CryptContext(schemes=["pbkdf2_sha512"], deprecated="auto")
 
     def __init__(
             self,
@@ -39,25 +44,25 @@ class User(DbBase):
         self._connection = connection
 
         # Get the data from the row
-        userId = row['id']
-        createdAt: str = row['created_at']
+        userId = row["id"]
+        createdAt: str = row["created_at"]
         super().__init__("users", connection, userId, createdAt)
 
         # Set all other data
-        self._uuid: str = row['uuid']
-        self._email: str = row['email']
-        self._password: str = row['password']
-        self._username: str = row['username']
-        self._accessLevel: int = row['access_level']
-
-        # Non-direct-from-database fields
-        self.banned = self._accessLevel == -1
+        self._uuid: str = row["uuid"]
+        self._email: str = row["email"]
+        self._password: str = row["password"]
+        self._username: str = row["username"]
+        self._accessLevel: int = row["access_level"]
+        self._accessToken: str = row["access_token"]
+        self._oauthScopes: list[str] = row["oauth_scopes"]
 
     """
 ================================================================================================================================================================
         Properties
 ================================================================================================================================================================
     """
+
     @property
     def uuid(self) -> str:
         """
@@ -147,7 +152,7 @@ class User(DbBase):
             None
         """
         # Hash the password
-        hashed = pbkdf2_sha512.hash(password)
+        hashed = self._context.hash(password)
 
         # Remove the old password from memory
         del password
@@ -182,7 +187,70 @@ class User(DbBase):
         """
         self._set("access_level", accessLevel)
         self._accessLevel = accessLevel
-        self.banned = accessLevel == -1  # Update the banned status if the access level is changed
+
+    @property
+    def banned(self) -> bool:
+        """
+        Whether the user is banned.
+
+        Returns:
+            bool: Whether the user is banned.
+        """
+        return self._accessLevel == -1
+
+    @banned.setter
+    def banned(
+            self,
+            banned: bool
+    ) -> None:
+        """
+        Sets whether the user is banned.
+
+        Args:
+            banned (bool): Whether the user is banned.
+
+        Returns:
+            None
+        """
+        self._set("access_level", -1 if banned else 0)
+        self._accessLevel = -1 if banned else 0
+
+    @property
+    def accessToken(self) -> str:  # Do not define a setter for this property, as it must not be changed
+        """
+        The access token of the user.
+
+        Returns:
+            str: The access token of the user.
+        """
+        return self._accessToken
+
+    @property
+    def oauthScopes(self) -> list[str]:
+        """
+        The OAuth scopes of the user.
+
+        Returns:
+            list[str]: The OAuth scopes of the user.
+        """
+        return self._oauthScopes
+
+    @oauthScopes.setter
+    def oauthScopes(
+            self,
+            oauthScopes: list[str]
+    ) -> None:
+        """
+        Sets the OAuth scopes of the user.
+
+        Args:
+            oauthScopes (list[str]): The OAuth scopes to set.
+
+        Returns:
+            None
+        """
+        self._set("oauth_scopes", oauthScopes)
+        self._oauthScopes = oauthScopes
 
     """
 ================================================================================================================================================================
@@ -198,13 +266,15 @@ class User(DbBase):
             dict: The user as a dictionary.
         """
         return {
-            'id': self.id,
-            'uuid': self.uuid,
-            'email': self.email,
-            'username': self.username,
-            'accessLevel': self.accessLevel,
-            'banned': self.banned,
-            'createdAt': self.createdAt
+            "id": self.id,
+            "createdAt": self.createdAt,
+            "uuid": self.uuid,
+            "email": self.email,
+            "username": self.username,
+            "accessLevel": self.accessLevel,
+            "banned": self.banned,
+            "accessToken": self.accessToken,
+            "oauthScopes": self.oauthScopes
         }
 
     def __str__(self) -> str:
@@ -244,4 +314,4 @@ class User(DbBase):
         Returns:
             bool: True if the password is correct, False otherwise.
         """
-        return pbkdf2_sha512.verify(password, self._password)
+        return self._context.verify(password, self._password)
