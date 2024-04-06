@@ -3,8 +3,10 @@ DROP TABLE IF EXISTS game_players;
 DROP TABLE IF EXISTS games;
 DROP TABLE IF EXISTS users;
 
+/* Add uuid extension */
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+/* Create tables */
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL NOT NULL PRIMARY KEY,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -35,3 +37,17 @@ CREATE TABLE IF NOT EXISTS games_users (
     FOREIGN KEY (users_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
     UNIQUE (games_id, users_id)  /* Prevent duplicate entries */
 );
+
+CREATE TABLE IF NOT EXISTS logs (
+    id SERIAL NOT NULL PRIMARY KEY,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    level INTEGER NOT NULL,
+    module TEXT NOT NULL,
+    message TEXT NOT NULL
+);
+
+/* Add permissions */
+GRANT ALL PRIVILEGES ON SCHEMA public TO minesweeper;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO minesweeper;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO minesweeper;
+GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO minesweeper;
