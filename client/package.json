@@ -1,0 +1,11 @@
+{
+  "name": "minesweeper-client",
+  "version": "0.0.1",
+  "description": "Competetive minesweeper client.",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "author": "",
+  "license": "MIT"
+}
