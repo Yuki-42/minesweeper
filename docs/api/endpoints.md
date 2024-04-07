@@ -25,6 +25,23 @@ Most common functions relating to games are handled on this endpoint using speci
 
 #### GET /api/game/
 
+Get a specific game by ID.
+
+##### Parameters
+
+- `gid`: The ID of the game to get.
+- `uid`: The ID of the user to get games for.
+
+##### Response
+
+- `200 OK`: Returns the game.
+- `400 Bad Request`: If the request is malformed.
+- `401 Unauthorized`: If the user is not authenticated.
+- `403 Forbidden`: If the user is forbidden from viewing the game.
+- `404 Not Found`: If the game or user is not found.
+
+#### GET /api/games/
+
 Get a list of all games. 
 
 - `all`: Get all games.
@@ -35,17 +52,11 @@ Get a list of all games.
 
 ##### Parameters
 
-- `gid`: The ID of the game to get.
-- `uid`: The ID of the user to get games for.
 - `type`: The type of games to get. Can be one of `all`, `active`, or `completed`. Default is `all`.
-
-Note: <br>
-- If `uid` is provided, `type` will be ignored.
-- If `gid` is provided, `uid` and `type` will be ignored.
 
 ##### Response
 
-- `200 OK`: Returns a list of games. If `gid` is provided, returns a single game.
+- `200 OK`: Returns a list of games.
 - `400 Bad Request`: If the request is malformed.
 - `401 Unauthorized`: If the user is not authenticated.
 - `403 Forbidden`: If the user is forbidden from viewing the game.
