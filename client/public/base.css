@@ -1,0 +1,12 @@
+:root {
+    /* Colors */
+    --main-bg: #010B13;
+    --bg-secondary: #0D0E1C;
+    --bg-tertiary: #0f1020;
+    --btn-important: #FF9F1C;
+    --btn-secondary: #03CEA4;
+    --btn-danger: #E22837;
+    --text-primary: #fff;
+    --text-secondary: #A0A0A0;
+    --text-dark: #000;
+}
