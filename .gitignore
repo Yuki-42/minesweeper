@@ -1,5 +1,8 @@
 # Added by Yuki42_
 server/.env
+server/venv
+client/node_modules
+.idea
 
 ### Python template
 # Byte-compiled / optimized / DLL files
