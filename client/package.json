@@ -2,10 +2,14 @@
   "name": "minesweeper-client",
   "version": "0.0.1",
   "description": "Competetive minesweeper client.",
-  "main": "index.js",
+  "main": "main.js",
   "scripts": {
-    "test": "test"
+    "test": "test",
+    "start": "electron ."
   },
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^29.2.0"
+  }
 }
