@@ -1,8 +1,19 @@
 # Added by Yuki42_
 server/.env
 server/venv
-client/node_modules
 .idea
+
+# Electron
+client/.DS_Store
+client/node_modules
+client/dist
+client/dist_electron
+
+# Log files
+client/npm-debug.log*
+client/yarn-debug.log*
+client/yarn-error.log*
+client/pnpm-debug.log*
 
 ### Python template
 # Byte-compiled / optimized / DLL files
