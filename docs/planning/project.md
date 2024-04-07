@@ -73,3 +73,8 @@ The Cell object will have the following attributes:
 - `revealed`: A boolean indicating whether the cell has been revealed.
 - `flagged`: A boolean indicating whether the cell has been flagged.
 
+# Update
+
+The plans have changed, and the game will now be implemented solely using the REST API. The game front-end will be
+implemented using electron and will communicate with the server using the REST API. The game will still be competitive,
+but the game board will be generated on the client side using the game parameters provided by the server. The server
