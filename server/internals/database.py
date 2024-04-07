@@ -1,13 +1,13 @@
 """
 Database module for the server
 """
-
 # Standard Library Imports
+from hashlib import sha256
 from typing import List
 
 # Third Party Imports
-from psycopg2 import connect, sql
-from psycopg2.sql import SQL
+from passlib.context import CryptContext
+from psycopg2 import connect
 from psycopg2.extensions import connection as Connection
 from psycopg2.extras import RealDictCursor, RealDictRow
 
@@ -25,6 +25,7 @@ class Database:
     _logger: SuppressedLoggerAdapter
     _config: Config
     _connection: Connection
+    _context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
     def __init__(
             self,
@@ -81,6 +82,7 @@ class Database:
 ===============================================================================================================================================================
     """
 
+    @property
     def users(self) -> List[User]:
         """
         Gets all users from the database.
@@ -91,7 +93,7 @@ class Database:
         self._logger.info("Getting all users")
 
         # Get the cursor
-        cursor = self._connection.cursor(cursor_factory=RealDictCursor)
+        cursor: RealDictCursor = self._connection.cursor(cursor_factory=RealDictCursor)
 
         # Get the users
         cursor.execute(
@@ -106,7 +108,8 @@ class Database:
             self,
             userId: int = None,
             uuid: str = None,
-            email: str = None
+            email: str = None,
+            token: str = None
     ) -> User | None:
         """
         Gets a user from the database using one of the provided parameters.
@@ -115,27 +118,61 @@ class Database:
             userId (int): The ID of the user.
             uuid (str): The UUID of the user.
             email (str): The email of the user.
+            token (str): The token of the user.
         """
         # Ensure that at least one parameter is provided
-        if userId is None and uuid is None and email is None:
+        if userId is None and uuid is None and email is None and token is None:
             raise ValueError("At least one parameter must be provided.")
 
-        self._logger.info(f"Getting user with ID {userId}, UUID {uuid}, and email {email}")
+        self._logger.info(f"Getting user with ID {userId}, UUID {uuid}, and email {email}, and token {token}")
 
         # Get the cursor
-        cursor = self._connection.cursor(cursor_factory=RealDictCursor)
+        cursor: RealDictCursor = self._connection.cursor(cursor_factory=RealDictCursor)
 
         # Get the user
         cursor.execute(
             """
             SELECT * FROM users
-            WHERE id = %s OR uuid = %s OR email = %s
+            WHERE id = %s OR uuid = %s OR email = %s OR access_token = %s
             """,
-            (userId, uuid, email)
+            (userId, uuid, email, token)
         )
         row: RealDictRow = cursor.fetchone()
         if row is None:
             return None
+
+        return User(row, self._connection)
+
+    def addUser(
+            self,
+            email: str,
+            password: str,
+            username: str
+    ) -> User:
+        """
+        Adds a user to the database.
+
+        Returns:
+            User: The user object.
+        """
+        self._logger.info(f"Adding user with email {email} and username {username}")
+
+        # Get the cursor
+        cursor: RealDictCursor = self._connection.cursor(cursor_factory=RealDictCursor)
+
+        # Hash the password
+        password = self._context.hash(password)
+
+        # Add the user
+        cursor.execute(
+            """
+            INSERT INTO users (email, password, username, access_token)
+            VALUES (%s, %s, %s, %s)
+            RETURNING *
+            """,
+            (email, password, username, sha256(email.encode() + username.encode()).hexdigest())
+        )
+        row: RealDictRow = cursor.fetchone()
 
         return User(row, self._connection)
 
@@ -145,6 +182,7 @@ class Database:
 ===============================================================================================================================================================
     """
 
+    @property
     def games(self) -> List[Game]:
         """
         Gets all games from the database.
@@ -155,7 +193,7 @@ class Database:
         self._logger.info("Getting all games")
 
         # Get the cursor
-        cursor = self._connection.cursor(cursor_factory=RealDictCursor)
+        cursor: RealDictCursor = self._connection.cursor(cursor_factory=RealDictCursor)
 
         # Get the games
         cursor.execute(
@@ -188,7 +226,7 @@ class Database:
         self._logger.info(f"Getting game with ID {gameId} and UUID {uuid}")
 
         # Get the cursor
-        cursor = self._connection.cursor(cursor_factory=RealDictCursor)
+        cursor: RealDictCursor = self._connection.cursor(cursor_factory=RealDictCursor)
 
         # Get the game
         cursor.execute(
