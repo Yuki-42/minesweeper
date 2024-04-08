@@ -12,7 +12,7 @@ def _makeAccessToken(
         data: dict,
         expires: timedelta,
         secretKey: str
-) -> str:
+) -> tuple[str, datetime]:
     """
     Makes an access token.
 
@@ -21,17 +21,21 @@ def _makeAccessToken(
         expires (timedelta): The time until the token expires.
 
     Returns:
-        str: The access token.
+        tuple[str, datetime]: The access token and the expiration time.
     """
     # Copy the data
     toEncode: dict = data.copy()
 
     # Add the expiration time
-    toEncode["exp"] = datetime.utcnow() + expires
+    expireTime = datetime.utcnow() + expires
+    toEncode["exp"] = expireTime
 
     # Encode the token
-    return jwt.encode(
-        toEncode,
-        secretKey,
-        algorithm="HS256"
+    return (
+        jwt.encode(
+            toEncode,
+            secretKey,
+            algorithm="HS256"
+        ),
+        expireTime
     )
