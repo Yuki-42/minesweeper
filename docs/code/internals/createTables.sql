@@ -1,7 +1,9 @@
 /* Drop existing tables */
-DROP TABLE IF EXISTS game_players;
+DROP TABLE IF EXISTS game_players;  /* Tables are dropped in order of dependency */
 DROP TABLE IF EXISTS games;
+DROP TABLE IF EXISTS tokens;
 DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS logs;
 
 /* Add uuid extension */
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -17,6 +19,15 @@ CREATE TABLE IF NOT EXISTS users (
     access_level INTEGER DEFAULT 0 NOT NULL,
     access_token TEXT NOT NULL,
     oauth_scopes TEXT[]
+);
+
+CREATE TABLE IF NOT EXISTS tokens (
+    id SERIAL NOT NULL PRIMARY KEY,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    user_id INTEGER NOT NULL,
+    token TEXT NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS games (

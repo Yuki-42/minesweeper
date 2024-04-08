@@ -62,6 +62,37 @@ CREATE TABLE IF NOT EXISTS users (
 );
 ```
 
+### tokens
+
+Used to store access tokens for users.
+
+| Column Name | Data Type | Default           | Description                              | Extra                | Example             |
+|-------------|-----------|-------------------|------------------------------------------|----------------------|---------------------|
+| id          | SERIAL    |                   | The unique identifier for the token.     | NOT NULL PRIMARY KEY | 1                   |
+| created_at  | TIMESTAMP | CURRENT_TIMESTAMP | The date and time the token was created. | NOT NULL             | 2020-01-01 12:00:00 |
+| user_id     | INTEGER   |                   | The ID of the user the token is for.     | NOT NULL             | 1                   |
+| token       | TEXT      |                   | The access token.                        | NOT NULL             | Token               |
+| expires_at  | TIMESTAMP |                   | The date and time the token expires.     | NOT NULL             | 2020-01-01 12:00:00 |
+
+#### Keys
+
+| Key Name   | Column(s) | Reference Table | Reference Column(s) |
+|------------|-----------|-----------------|---------------------|
+| user_id_fk | user_id   | users           | id                  |
+
+#### SQL
+
+```postgresql
+CREATE TABLE IF NOT EXISTS tokens (
+    id SERIAL NOT NULL PRIMARY KEY,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    user_id INTEGER NOT NULL,
+    token TEXT NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+```
+
 ### games
 
 Used to store game information.
