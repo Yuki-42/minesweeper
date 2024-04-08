@@ -1,7 +1,7 @@
 """
 The config module.
 """
-
+from datetime import timedelta
 # Standard Library Imports
 from os import environ
 
@@ -19,9 +19,9 @@ class Config:
     dbName: str
     dbUser: str
     dbPassword: str
-    secretKey: str
-    tokenExpireDays: int
-    tokenExpireMinutes: int
+    jwtSecret: str
+
+    tokenExpireTime: timedelta  # Abstracting the token expiration time for ease of use
 
     def __init__(self) -> None:
         """
@@ -39,6 +39,10 @@ class Config:
         self.dbName = environ.get("DB_NAME")
         self.dbUser = environ.get("DB_USER")
         self.dbPassword = environ.get("DB_PASS")
-        self.secretKey = environ.get("SECRET_KEY")
-        self.tokenExpireDays = int(environ.get("TOKEN_EXPIRE_DAYS"))
-        self.tokenExpireMinutes = int(environ.get("TOKEN_EXPIRE_MINUTES"))
+        self.jwtSecret = environ.get("SECRET_KEY")
+
+        # Set the token expiration time
+        self.tokenExpireTime = timedelta(
+            days=int(environ.get("TOKEN_EXPIRE_DAYS")),
+            minutes=int(environ.get("TOKEN_EXPIRE_MINUTES"))
+        )
