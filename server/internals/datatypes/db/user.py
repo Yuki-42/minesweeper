@@ -6,10 +6,11 @@ Contains the user class.
 # Third Party Imports
 from passlib.context import CryptContext
 from psycopg2.extensions import connection as Connection
-from psycopg2.extras import RealDictRow
+from psycopg2.extras import RealDictRow, RealDictCursor
 
 # Local Imports
 from ._base import DbBase
+from .token import Token
 
 
 class User(DbBase):
@@ -22,7 +23,7 @@ class User(DbBase):
     _password: str
     _username: str
     _accessLevel: int
-    _accessToken: str
+    _refreshToken: str
     _oauthScopes: list[str]
 
     # Password hashing context
@@ -54,7 +55,7 @@ class User(DbBase):
         self._password: str = row["password"]
         self._username: str = row["username"]
         self._accessLevel: int = row["access_level"]
-        self._accessToken: str = row["access_token"]
+        self._refreshToken: str = row["refresh_token"]
         self._oauthScopes: list[str] = row["oauth_scopes"]
 
     """
@@ -216,14 +217,34 @@ class User(DbBase):
         self._accessLevel = -1 if banned else 0
 
     @property
-    def accessToken(self) -> str:  # Do not define a setter for this property, as it must not be changed
+    def refreshToken(self) -> str:  # Do not define a setter for this property, as it must not be changed
         """
         The access token of the user.
 
         Returns:
             str: The access token of the user.
         """
-        return self._accessToken
+        return self._refreshToken
+
+    @property
+    def accessTokens(self) -> list[Token]:
+        """
+        The access tokens of the user.
+
+        Returns:
+            list[str]: The access tokens of the user.
+        """
+        # This is a special case, as it requires a database operation to get the tokens
+        with self._connection.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute(
+                """
+                SELECT * FROM tokens
+                WHERE user_id = %s
+                """,
+                (self.id,)
+            )
+            rows: list[RealDictRow] = cursor.fetchall()
+            return [Token(row, self._connection) for row in rows]
 
     @property
     def oauthScopes(self) -> list[str]:
@@ -273,7 +294,8 @@ class User(DbBase):
             "username": self.username,
             "accessLevel": self.accessLevel,
             "banned": self.banned,
-            "accessToken": self.accessToken,
+            "refreshToken": self.refreshToken,
+            "accessTokens": self.accessTokens,
             "oauthScopes": self.oauthScopes
         }
 
