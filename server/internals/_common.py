@@ -9,9 +9,9 @@ from jose import jwt
 
 
 def _makeAccessToken(
-        config,  # This is not type hinted because it is a circular import
         data: dict,
-        expires: timedelta = None
+        expires: timedelta,
+        secretKey: str
 ) -> str:
     """
     Makes an access token.
@@ -23,9 +23,6 @@ def _makeAccessToken(
     Returns:
         str: The access token.
     """
-    # Set the default expiration time
-    expires = expires or timedelta(days=config.tokenExpireDays, minutes=config.tokenExpireMinutes)
-
     # Copy the data
     toEncode: dict = data.copy()
 
@@ -35,6 +32,6 @@ def _makeAccessToken(
     # Encode the token
     return jwt.encode(
         toEncode,
-        config.secretKey,
+        secretKey,
         algorithm="HS256"
     )
