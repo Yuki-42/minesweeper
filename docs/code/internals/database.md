@@ -89,7 +89,8 @@ CREATE TABLE IF NOT EXISTS tokens (
     user_id INTEGER NOT NULL,
     token TEXT NOT NULL,
     expires_at TIMESTAMP NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE (user_id, token)  /* Prevent duplicate entries */
 );
 ```
 
