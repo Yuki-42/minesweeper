@@ -2,8 +2,8 @@
 Database module for the server
 """
 # Standard Library Imports
-from hashlib import sha256
 from typing import List
+from multiprocessing import Process
 
 # Third Party Imports
 from passlib.context import CryptContext
@@ -12,6 +12,7 @@ from psycopg2.extensions import connection as Connection
 from psycopg2.extras import RealDictCursor, RealDictRow
 
 # Local Imports
+from ._common import _makeAccessToken
 from .config import Config
 from .datatypes.db import User, Game
 from .logging import SuppressedLoggerAdapter, createLogger
@@ -102,14 +103,15 @@ class Database:
             """
         )
         rows: List[RealDictRow] = cursor.fetchall()
-        return [User(row, self._connection) for row in rows]
+        return [User(row, self._connection, self._config) for row in rows]
 
     def getUser(
             self,
             userId: int = None,
             uuid: str = None,
             email: str = None,
-            token: str = None
+            token: str = None,
+            refreshToken: str = None
     ) -> User | None:
         """
         Gets a user from the database using one of the provided parameters.
@@ -118,30 +120,45 @@ class Database:
             userId (int): The ID of the user.
             uuid (str): The UUID of the user.
             email (str): The email of the user.
-            token (str): The token of the user.
+            token (str): An access token of the user.
+            refreshToken (str): The refresh token of the user.
         """
         # Ensure that at least one parameter is provided
         if userId is None and uuid is None and email is None and token is None:
             raise ValueError("At least one parameter must be provided.")
 
-        self._logger.info(f"Getting user with ID {userId}, UUID {uuid}, and email {email}, and token {token}")
+        self._logger.info(
+            f"Getting user with ID {userId}, UUID {uuid}, and email {email}, token {token}, and refresh token {refreshToken}")
 
-        # Get the cursor
-        cursor: RealDictCursor = self._connection.cursor(cursor_factory=RealDictCursor)
+        # Attempt to get the user from the tokens table
+        with self._connection.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute(
+                """
+                SELECT users.* FROM users
+                JOIN tokens ON tokens.user_id = users.id  /* Join users table and tokens table to get user data */
+                WHERE tokens.token = %s
+                """,
+                (token,)
+            )
+            row: RealDictRow = cursor.fetchone()  # Get the user from the tokens table
 
-        # Get the user
-        cursor.execute(
-            """
-            SELECT * FROM users
-            WHERE id = %s OR uuid = %s OR email = %s OR access_token = %s
-            """,
-            (userId, uuid, email, token)
-        )
-        row: RealDictRow = cursor.fetchone()
-        if row is None:
-            return None
+        if row is not None:  # If the user was found in the tokens table
+            return User(row, self._connection, self._config)
 
-        return User(row, self._connection)
+        with self._connection.cursor(cursor_factory=RealDictCursor) as cursor:
+            cursor.execute(
+                """
+                SELECT * FROM users
+                WHERE id = %s OR uuid = %s OR email = %s OR refresh_token = %s
+                """,
+                (userId, uuid, email, refreshToken,)
+            )
+            row: RealDictRow = cursor.fetchone()
+
+        if row is not None:
+            return User(row, self._connection, self._config)
+
+        return None
 
     def addUser(
             self,
@@ -157,24 +174,34 @@ class Database:
         """
         self._logger.info(f"Adding user with email {email} and username {username}")
 
-        # Get the cursor
-        cursor: RealDictCursor = self._connection.cursor(cursor_factory=RealDictCursor)
+        with self._connection.cursor(cursor_factory=RealDictCursor) as cursor:
+            # Hash the password
+            password = self._context.hash(password)
 
-        # Hash the password
-        password = self._context.hash(password)
+            # Add the user
+            cursor.execute(
+                """
+                INSERT INTO users (email, password, username, access_token)
+                VALUES (%s, %s, %s, %s)
+                RETURNING *
+                """,
+                (
+                    email,
+                    password,
+                    username,
+                    _makeAccessToken(
+                        {
+                            "sub": email
+                        },
+                        self._config.tokenExpireTime,
+                        self._config.jwtSecret
+                    )
+                )
+            )
+            row: RealDictRow = cursor.fetchone()
+            self._connection.commit()
 
-        # Add the user
-        cursor.execute(
-            """
-            INSERT INTO users (email, password, username, access_token)
-            VALUES (%s, %s, %s, %s)
-            RETURNING *
-            """,
-            (email, password, username, sha256(email.encode() + username.encode()).hexdigest())
-        )
-        row: RealDictRow = cursor.fetchone()
-
-        return User(row, self._connection)
+        return User(row, self._connection, self._config)
 
     """
 ===============================================================================================================================================================
@@ -202,7 +229,7 @@ class Database:
             """
         )
         rows: List[RealDictRow] = cursor.fetchall()
-        return [Game(row, self._connection) for row in rows]
+        return [Game(row, self._connection, self._config) for row in rows]
 
     def getGame(
             self,
@@ -240,4 +267,4 @@ class Database:
         if row is None:
             return None
 
-        return Game(row, self._connection)
+        return Game(row, self._connection, self._config)
