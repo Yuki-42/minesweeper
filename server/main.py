@@ -1,19 +1,18 @@
 """
 Main file for the project
 """
-from datetime import timedelta, datetime
+from datetime import time, datetime
 # Standard Library Imports
-from json import load as jsonLoad
 from typing import Any, Annotated
 
 # Third Party Imports
-from fastapi import FastAPI, APIRouter, Response, status, Depends, HTTPException
+from fastapi import FastAPI, Response, status, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 
 # Local Imports
 from internals import Config, Database
-from internals.datatypes.db import User, Game
+from internals.datatypes.db import Game, Token, Tokens, User, GameModel, TokenModel, UserModel
 from internals.logging import createLogger, SuppressedLoggerAdapter
 
 # Create the FastAPI app
@@ -30,9 +29,6 @@ logger: SuppressedLoggerAdapter = createLogger(
     databaseConnection=database.connection
 )
 
-# Constants
-SECRET_KEY: str = config.secretKey
-ACCESS_TOKEN_EXPIRE: timedelta = timedelta(days=config.tokenExpireDays, minutes=config.tokenExpireMinutes)
 
 """
 ================================================================================================================================================================
@@ -64,16 +60,32 @@ async def currentUser(token: Annotated[str, Depends(oauth2Scheme)]) -> User | No
 
     # Decode the token
     try:
-        payload: dict[str, Any] = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        payload: dict[str, Any] = jwt.decode(token, config.jwtSecret, algorithms=["HS256"])
         email: str = payload.get("sub")
         if email is None:
+            logger.error("Missing sub in token.")
             raise tokenError
-    except JWTError:
+    except JWTError as e:
+        logger.error("Error decoding token.", exc_info=e)
         raise tokenError
 
-    user: User = database.getUser(token=token)
+    # Ensure that the token is not expired
+    if payload["exp"] < int(datetime.now().timestamp()):  # This is almost definitely going to throw an error
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token expired.",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+    user: User = database.getUser(
+        token=token
+    )
 
     if not user:
+        raise tokenError
+
+    # Ensure that the user returned is the same user as the one in the token
+    if user.email != email:
         raise tokenError
 
     if user.banned:
@@ -83,30 +95,6 @@ async def currentUser(token: Annotated[str, Depends(oauth2Scheme)]) -> User | No
         )
 
     return user
-
-
-def makeAccessToken(
-        data: dict,
-        expires: timedelta
-) -> str:
-    """
-    Makes an access token.
-
-    Args:
-        data (dict): The data to include in the token.
-        expires (timedelta): The time until the token expires.
-
-    Returns:
-        str: The access token.
-    """
-    # Copy the data
-    toEncode: dict = data.copy()
-
-    # Add the expiration time
-    toEncode["exp"] = datetime.utcnow() + expires
-
-    # Encode the token
-    return jwt.encode(toEncode, config.secretKey, algorithm="HS256")
 
 
 """
@@ -135,13 +123,13 @@ async def _spec() -> dict[str, Any]:
 """
 
 
-@app.get("/game", status_code=200)
+@app.get("/game", status_code=200, response_model=GameModel)
 async def _getGame(
         response: Response,
         user: Annotated[User, Depends(currentUser)],
         gameId: int = None,
         uuid: str = None,
-) -> dict[str, Any]:
+) -> GameModel | dict[str, Any]:
     """
     Returns the game with the given ID.
 
@@ -167,7 +155,7 @@ async def _getGame(
         response.status_code = status.HTTP_404_NOT_FOUND
         return {"error": "Game not found."}
 
-    return game.dict()
+    return game.toModel()
 
 
 """
@@ -190,10 +178,12 @@ async def _loginUser(
         response (Response): The response object.
 
     Returns:
-        dict[str, Any]: The user.
+        dict[str, Any]: The token data.
     """
     # Get the user
-    user: User | None = database.getUser(email=formData.username)
+    user: User | None = database.getUser(
+        email=formData.username
+    )
 
     # Check if the user exists
     if user is None:
@@ -210,19 +200,57 @@ async def _loginUser(
             headers={"WWW-Authenticate": "Bearer"}
         )
 
-    #
+    # Create a new access token for the user
+    token: Token = user.accessTokens.new()
 
-    return {"access_token": user.accessToken, "token_type": "bearer"}
+    return {
+        "access_token": token.token,
+        "expires_at": token.expiration,
+        "refresh_token": user.refreshToken,
+        "token_type": "bearer"
+    }
 
 
-@app.get("/user", status_code=200)
+@app.post("/token/new")
+async def _refreshToken(
+        response: Response,
+        refreshToken: str = None
+) -> dict[str, Any]:
+    """
+    Refreshes the user's access token.
+
+    Args:
+        response (Response): The response object.
+        refreshToken (str): The refresh token.
+
+    Returns:
+        dict[str, Any]: The new access token.
+    """
+    # Get the user
+    user: User | None = database.getUser(
+        token=refreshToken
+    )
+
+    # Check if the user exists
+    if user is None:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return {"error": "User not found."}
+
+    return {
+        "access_token": user.accessTokens.new().toModel(),
+        "refresh_token": user.refreshToken,
+        "token_type": "bearer"
+    }
+
+
+@app.get("/user", status_code=200, response_model=UserModel)
 async def _getUser(
         response: Response,
         user: Annotated[User, Depends(currentUser)],
         userId: int = None,
         uuid: str = None,
         email: str = None
-) -> dict[str, Any]:
+) -> UserModel | dict[str, Any]:
     """
     Returns the user with the given ID.
 
@@ -238,13 +266,17 @@ async def _getUser(
     """
     # Ensure that only one of userId, uuid, or email is set
     if userId is not None and uuid is not None and email is not None:
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        return {"error": "Only one of userId, uuid, or email may be set."}
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only one of userId, uuid, or email may be set."
+        )
 
     # Ensure that the user is authorized to view the user
     if "read:user" not in user.oauthScopes and "all" not in user.oauthScopes:
-        response.status_code = status.HTTP_403_FORBIDDEN
-        return {"error": "Unauthorized"}
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User is not authorized to view users."
+        )
 
     # Get the user
     user: User = database.getUser(
@@ -255,10 +287,12 @@ async def _getUser(
 
     # Return the user
     if user is None:
-        response.status_code = status.HTTP_404_NOT_FOUND
-        return {"error": "User not found."}
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found."
+        )
 
-    return user.dict()
+    return user.toModel()
 
 
 @app.post("/user", status_code=200)
@@ -310,4 +344,8 @@ async def _createUser(
     )
 
     # Return the user's access token
-    return {"access_token": user.accessToken, "token_type": "bearer"}
+    return {
+        "access_token": user.accessTokens.new().toModel(),
+        "refresh_token": user.refreshToken,
+        "token_type": "bearer"
+    }
