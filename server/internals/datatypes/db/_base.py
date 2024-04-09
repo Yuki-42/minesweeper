@@ -4,11 +4,21 @@ Base class for all data types.
 
 # Standard Library Imports
 from typing import Any
+from datetime import datetime
 
 # Third Party Imports
+from pydantic import BaseModel as PydanticBaseModel
 from psycopg2.extensions import connection as Connection
 from psycopg2.extras import RealDictRow, RealDictCursor
 from psycopg2.sql import SQL, Identifier
+
+
+class BaseModel(PydanticBaseModel):
+    """
+    Base class for all Pydantic models.
+    """
+    id: int
+    createdAt: datetime
 
 
 class DbBase:
@@ -17,7 +27,7 @@ class DbBase:
     """
     # Type hints
     id: int
-    createdAt: str
+    createdAt: datetime
 
     _connection: Connection
     _tableName: str
@@ -27,7 +37,7 @@ class DbBase:
             tableName: str,
             connection: Connection,
             id: int,
-            createdAt: str
+            createdAt: datetime
     ) -> None:
         """
         Initializes the DbBase object.
@@ -36,7 +46,7 @@ class DbBase:
             tableName (str): The name of the table in the database.
             connection (Connection): The connection to use for database operations.
             id (int): The ID of the data type.
-            createdAt (str): The time the data type was created.
+            createdAt (datetime): The time the data type was created.
 
         Returns:
             None
@@ -44,7 +54,7 @@ class DbBase:
         self._tableName = tableName
         self._connection = connection
         self.id = id
-        self.createdAt = createdAt
+        self.createdAt = createdAt  # String conversion is handled by postgres
 
     def __int__(self) -> int:
         """
