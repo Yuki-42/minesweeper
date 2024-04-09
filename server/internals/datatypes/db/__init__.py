@@ -3,5 +3,7 @@ Database data types initialization module
 """
 
 # Local Imports
-from .user import User
-from .game import Game
+from .game import Game, GameModel
+from .token import Token, TokenModel
+from .tokens import Tokens
+from .user import User, UserModel

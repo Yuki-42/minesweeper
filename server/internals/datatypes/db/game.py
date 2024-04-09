@@ -7,11 +7,21 @@ Contains the game class.
 # Third Party Imports
 from psycopg2.extensions import connection as Connection
 from psycopg2.extras import RealDictRow
-from psycopg2.sql import SQL, Identifier
 
 # Local Imports
-from server.internals.datatypes.db._base import DbBase
-from server.internals.datatypes.db.user import User
+from ._base import DbBase, BaseModel
+from .user import User
+from ...config import Config
+
+
+class GameModel(BaseModel):
+    """
+    Model for the game.
+    """
+    key: str
+    width: int
+    height: int
+    time: int | None
 
 
 class Game(DbBase):
@@ -24,10 +34,15 @@ class Game(DbBase):
     _height: int
     _time: int | None  # Time in MS
 
+    # Non-data properties
+    _config: Config
+    _connection: Connection
+
     def __init__(
             self,
             row: RealDictRow,
-            connection: Connection
+            connection: Connection,
+            config: Config
     ) -> None:
         """
         Initializes the Game object.
@@ -38,6 +53,7 @@ class Game(DbBase):
         """
         # Set the connection
         self._connection = connection
+        self._config = config
 
         # Get the data from the row
         gameId = row['id']
@@ -61,6 +77,7 @@ class Game(DbBase):
             be changed. 
 ================================================================================================================================================================
     """
+
     @property
     def key(self) -> str:
         """
@@ -126,7 +143,7 @@ class Game(DbBase):
         Returns:
             list[User]: The users in the game.
         """
-        return [User(row, self._connection) for row in self._getAssoc("users")]
+        return [User(row, self._connection, self._config) for row in self._getAssoc("users")]
 
     # Allow someone to add a user to the game
     @users.setter  # IDK if this will work or not
@@ -144,3 +161,25 @@ class Game(DbBase):
             None
         """
         self._addAssoc("users", user.id)
+
+    """
+================================================================================================================================================================
+        Misc Methods
+================================================================================================================================================================
+    """
+
+    def toModel(self) -> GameModel:
+        """
+        Converts the game to a model.
+
+        Returns:
+            GameModel: The game model.
+        """
+        return GameModel(
+            id=self.id,
+            createdAt=self.createdAt,
+            key=self.key,
+            width=self.width,
+            height=self.height,
+            time=self.time
+        )

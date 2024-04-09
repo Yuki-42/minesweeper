@@ -9,7 +9,16 @@ from psycopg2.extensions import connection as Connection
 from psycopg2.extras import RealDictRow
 
 # Local Imports
-from ._base import DbBase
+from ._base import DbBase, BaseModel
+
+
+class TokenModel(BaseModel):
+    """
+    Model for the token.
+    """
+    userId: int
+    token: str
+    expiration: datetime
 
 
 class Token(DbBase):
@@ -17,8 +26,9 @@ class Token(DbBase):
     Represents a token in the database.
     """
     # Type hints
-    _token: str
-    _expiration: datetime
+    userId: int
+    token: str
+    expiration: datetime
 
     def __init__(
             self,
@@ -36,40 +46,29 @@ class Token(DbBase):
         self._connection = connection
 
         # Get the data from the row
-        tokenId = row['id']
-        createdAt: str = row['created_at']
-        super().__init__("tokens", connection, tokenId, createdAt)
+        super().__init__(
+            "tokens",
+            connection,
+            row["id"],
+            row["created_at"]
+        )
 
         # Set all other data
-        self._token = row['token']
-        self._expiration = row['expiration']
+        self.userId = row["user_id"]
+        self.token = row["token"]
+        self.expiration = row["expires_at"]
 
-    """
-================================================================================================================================================================
-        Properties
-        
-        Note: 
-        - The expiration property is a special case. It is a datetime object. This is because the expiration time 
-            is stored as a datetime object in the database. 
-================================================================================================================================================================
-    """
-
-    @property
-    def token(self) -> str:
+    def toModel(self) -> TokenModel:
         """
-        Returns the token.
+        Converts the token to a model.
 
         Returns:
-            str: The token.
+            TokenModel: The token model.
         """
-        return self._token
-
-    @property
-    def expiration(self) -> datetime:
-        """
-        Returns the expiration time.
-
-        Returns:
-            datetime: The expiration time.
-        """
-        return self._expiration
+        return TokenModel(
+            id=self.id,
+            createdAt=self.createdAt,
+            userId=self.userId,
+            token=self.token,
+            expiration=self.expiration
+        )

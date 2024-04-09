@@ -181,15 +181,16 @@ class DatabaseHandler(Handler):
         Returns:
             None
         """
-        self._cursor.execute(
-            "INSERT INTO logs (level, module, message) VALUES (%s, %s, %s)",
-            (
-                record.levelno,
-                record.name,
-                record.msg
+        with self._connection.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO logs (level, module, message) VALUES (%s, %s, %s)",
+                (
+                    record.levelno,
+                    record.name,
+                    record.msg
+                )
             )
-        )
-        self._connection.commit()
+            self._connection.commit()
 
 
 # Custom LoggerAdapter that can be disabled

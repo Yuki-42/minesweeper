@@ -11,8 +11,16 @@ from psycopg2.extensions import connection as Connection
 from psycopg2.extras import RealDictRow, RealDictCursor
 
 # Local Imports
-from .token import Token
+from .token import Token, TokenModel
+from ._base import BaseModel
 from ..._common import _makeAccessToken
+
+
+class TokensModel(BaseModel):
+    """
+    Model for the tokens.
+    """
+    tokens: list[TokenModel]
 
 
 class Tokens(list):
@@ -24,6 +32,14 @@ class Tokens(list):
     _expirationTime: timedelta
     _userId: int
     _email: str
+
+    # Non-data properties
+    _connection: Connection
+    _expirationTime: timedelta
+    _jwtSecret: str
+    _userId: int
+    _email: str
+    _refreshing: bool = False
 
     def __init__(
             self,
@@ -78,8 +94,15 @@ class Tokens(list):
         Returns:
             None
         """
+        # If the refreshing flag is set to True, return
+        if self._refreshing:
+            return
+
+        # Set the refreshing flag to True to prevent infinite recursion
+        self._refreshing = True
+
         # Get the current time
-        currentTime: str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        currentTime: datetime = datetime.now()
 
         # Refresh all the tokens in the list
         for token in self:
@@ -97,6 +120,9 @@ class Tokens(list):
                 (self._userId, currentTime)
             )
             self._connection.commit()
+
+        # Set the refreshing flag to False
+        self._refreshing = False
 
     def new(self) -> Token:
         """
@@ -137,6 +163,19 @@ class Tokens(list):
         self.append(token)
 
         return token
+
+    def toModel(self) -> TokensModel:
+        """
+        Converts the tokens to a model.
+
+        Returns:
+            TokensModel: The tokens model.
+        """
+        # Refresh the tokens before converting them
+        self._refresh()
+        return TokensModel(
+            tokens=[token.toModel() for token in self]
+        )
 
     """
 ===============================================================================================================================================================

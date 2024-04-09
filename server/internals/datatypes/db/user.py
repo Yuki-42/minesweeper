@@ -9,8 +9,21 @@ from psycopg2.extensions import connection as Connection
 from psycopg2.extras import RealDictRow, RealDictCursor
 
 # Local Imports
-from ._base import DbBase
-from .token import Token
+from ._base import DbBase, BaseModel
+from .tokens import Tokens
+from ...config import Config
+
+
+class UserModel(BaseModel):
+    """
+    Model for the user.
+    """
+    uuid: str
+    email: str
+    username: str
+    accessLevel: int
+    refreshToken: str
+    oauthScopes: list[str]
 
 
 class User(DbBase):
@@ -32,7 +45,8 @@ class User(DbBase):
     def __init__(
             self,
             row: RealDictRow,
-            connection: Connection
+            connection: Connection,
+            config: Config
     ) -> None:
         """
         Initializes the User object.
@@ -43,6 +57,9 @@ class User(DbBase):
         """
         # Set the connection
         self._connection = connection
+
+        # Set the config
+        self._config = config
 
         # Get the data from the row
         userId = row["id"]
@@ -227,7 +244,7 @@ class User(DbBase):
         return self._refreshToken
 
     @property
-    def accessTokens(self) -> list[Token]:
+    def accessTokens(self) -> Tokens:
         """
         The access tokens of the user.
 
@@ -244,7 +261,14 @@ class User(DbBase):
                 (self.id,)
             )
             rows: list[RealDictRow] = cursor.fetchall()
-            return [Token(row, self._connection) for row in rows]
+            return Tokens(
+                rows,
+                self._connection,
+                self._config.tokenExpireTime,
+                self._config.jwtSecret,
+                self.id,
+                self.email
+            )
 
     @property
     def oauthScopes(self) -> list[str]:
@@ -337,3 +361,21 @@ class User(DbBase):
             bool: True if the password is correct, False otherwise.
         """
         return self._context.verify(password, self._password)
+
+    def toModel(self) -> UserModel:
+        """
+        Converts the user to a model.
+
+        Returns:
+            UserModel: The user model.
+        """
+        return UserModel(
+            id=self.id,
+            createdAt=self.createdAt,
+            uuid=self.uuid,
+            email=self.email,
+            username=self.username,
+            accessLevel=self.accessLevel,
+            refreshToken=self.refreshToken,
+            oauthScopes=self.oauthScopes
+        )
